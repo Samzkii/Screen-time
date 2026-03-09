@@ -173,6 +173,34 @@ CREATE INDEX idx_activity_completions_status ON activity_completions(status);
 CREATE INDEX idx_activity_completions_submitted_at ON activity_completions(submitted_at);
 
 -- ==========================================
+-- CHORES
+-- Quick tasks assigned by parents to children for screen time rewards
+-- ==========================================
+CREATE TABLE IF NOT EXISTS chores (
+  id SERIAL PRIMARY KEY,
+  family_id INT NOT NULL REFERENCES families(id) ON DELETE CASCADE,
+  kid_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  created_by INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  
+  title VARCHAR(255) NOT NULL,
+  description TEXT,
+  
+  duration_minutes INT NOT NULL,
+  base_screen_time_minutes INT NOT NULL,
+  
+  status VARCHAR(20) NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'completed', 'canceled')),
+  
+  completed_at TIMESTAMP,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_chores_kid_id ON chores(kid_id);
+CREATE INDEX idx_chores_family_id ON chores(family_id);
+CREATE INDEX idx_chores_status ON chores(status);
+CREATE INDEX idx_chores_created_at ON chores(created_at);
+
+-- ==========================================
 -- XP TRANSACTION LOG
 -- Audit trail for all XP changes
 -- ==========================================

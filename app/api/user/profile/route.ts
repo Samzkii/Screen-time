@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
     }
 
     const result = await query(
-      `SELECT id, email, name, role, current_level, total_xp, daily_screen_time_limit, weekly_screen_time_used, created_at, updated_at 
+      `SELECT id, email, name, role, family_id, current_level, total_xp, daily_screen_time_limit, weekly_screen_time_used, created_at, updated_at 
        FROM users WHERE id = $1`,
       [decoded.userId]
     );

@@ -35,15 +35,35 @@ export async function POST(
 
     const chore = choreResult.rows[0];
 
-    // Verify authorization
-    if (decoded.role === 'parent' && chore.parent_id !== decoded.userId) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 403 }
+    // Verify authorization: parents can complete chores for any child in their family,
+    // children can only complete their own chores.
+    if (decoded.role === 'parent') {
+      const parentResult = await query(
+        `SELECT family_id FROM users WHERE id = $1 AND role = 'parent'`,
+        [decoded.userId]
       );
-    }
 
-    if (decoded.role === 'child' && chore.kid_id !== decoded.userId) {
+      if (parentResult.rows.length === 0) {
+        return NextResponse.json(
+          { error: 'Parent account not found' },
+          { status: 404 }
+        );
+      }
+
+      const familyId = parentResult.rows[0].family_id as number;
+
+      const kidResult = await query(
+        `SELECT id FROM users WHERE id = $1 AND family_id = $2 AND role = 'child'`,
+        [chore.kid_id, familyId]
+      );
+
+      if (kidResult.rows.length === 0) {
+        return NextResponse.json(
+          { error: 'Unauthorized' },
+          { status: 403 }
+        );
+      }
+    } else if (decoded.role === 'child' && chore.kid_id !== decoded.userId) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 403 }
@@ -71,28 +91,25 @@ export async function POST(
 
     // Update chore as completed
     await query(
-      `UPDATE chores SET completed = true, completed_at = NOW(), updated_at = NOW() WHERE id = $1`,
+      `UPDATE chores SET status = 'completed', completed_at = NOW(), updated_at = NOW() WHERE id = $1`,
       [choreId]
     );
 
-    // Log screen time
-    const logResult = await query(
-      `INSERT INTO screen_time_logs (kid_id, chore_id, duration_minutes, multiplier, earned_minutes)
-       VALUES ($1, $2, $3, $4, $5)
-       RETURNING *`,
-      [chore.kid_id, choreId, chore.duration_minutes, multiplier, earnedMinutes]
-    );
-
-    // Update user's total screen time earned
-    await query(
-      `UPDATE users SET total_screen_time_earned = total_screen_time_earned + $1 WHERE id = $2`,
-      [earnedMinutes, chore.kid_id]
-    );
+    // NOTE: The legacy implementation wrote to a screen_time_logs table and
+    // updated total_screen_time_earned directly on users. The current schema
+    // models screen time differently, so for now we only mark the chore as
+    // completed and return the calculated values to the client.
 
     return NextResponse.json(
       {
-        chore: { ...chore, completed: true, completed_at: new Date() },
-        screenTime: logResult.rows[0],
+        chore: { ...chore, status: 'completed', completed_at: new Date().toISOString() },
+        screenTime: {
+          kid_id: chore.kid_id,
+          chore_id: choreId,
+          duration_minutes: chore.duration_minutes,
+          multiplier,
+          earned_minutes: earnedMinutes,
+        },
       },
       { status: 200 }
     );

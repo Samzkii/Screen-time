@@ -5,7 +5,16 @@ import { createToken } from '@/lib/auth';
 
 export async function POST(request: NextRequest) {
   try {
-    const { email, password, name, role, familyId: bodyFamilyId } = await request.json();
+    const {
+      email,
+      password,
+      name,
+      role: rawRole,
+      familyId: bodyFamilyId,
+    } = await request.json();
+
+    // Normalize role to align with database values
+    const role = rawRole === 'kid' ? 'child' : rawRole;
 
     if (!email || !password || !name || !role) {
       return NextResponse.json(

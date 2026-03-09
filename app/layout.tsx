@@ -25,9 +25,11 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen text-slate-50`}
       >
-        {children}
+        <div className="min-h-screen bg-slate-950/70 bg-[radial-gradient(circle_at_top,_rgba(56,189,248,0.25)_0,_transparent_45%),_radial-gradient(circle_at_bottom,_rgba(129,140,248,0.35)_0,_transparent_55%)]">
+          {children}
+        </div>
       </body>
     </html>
   );
